@@ -13,12 +13,19 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] private float sprintSpeed = 6.0f;
     [SerializeField] private float gravity = 30.0f;
 
-    [Header("Look Parameter")] [SerializeField, Range(1, 10)]
+    [Header("Look Parameter")] [SerializeField] [Range(1, 10)]
     private float lookSpeedX = 2.0f;
 
-    [SerializeField, Range(1, 10)] private float lookSpeedY = 2.0f;
-    [SerializeField, Range(1, 180)] private float upperLookLimit = 80.0f;
-    [SerializeField, Range(1, 180)] private float lowerLookLimit = 80.0f;
+    [SerializeField] [Range(1, 10)] private float lookSpeedY = 2.0f;
+    [SerializeField] [Range(1, 180)] private float upperLookLimit = 80.0f;
+    [SerializeField] [Range(1, 180)] private float lowerLookLimit = 80.0f;
+
+    [Header("Jumping Parameters")] [SerializeField]
+    private float jumpForce = 8.0f;
+
+    private readonly bool canJump = true;
+    private readonly KeyCode jumpKey = KeyCode.Space;
+
     private CharacterController characterController;
     private Vector2 currentInput;
 
@@ -27,8 +34,11 @@ public class FirstPersonController : MonoBehaviour
     private Camera playerCamera;
 
     private float rotationX;
-    private bool CanMove { get; set; } = true;
+    private bool CanMove => true;
+
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
+
+    private bool ShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
 
     // Start is called before the first frame update
     private void Start()
@@ -46,6 +56,9 @@ public class FirstPersonController : MonoBehaviour
         HandleMovementInput();
         HandleMouseLook();
 
+        if (canJump)
+            HandleJump();
+
         ApplyFinalMovements();
     }
 
@@ -55,8 +68,8 @@ public class FirstPersonController : MonoBehaviour
             (IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
 
         var moveDirectionY = moveDirection.y;
-        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) +
-                        (transform.TransformDirection(Vector3.right) * currentInput.y);
+        moveDirection = transform.TransformDirection(Vector3.forward) * currentInput.x +
+                        transform.TransformDirection(Vector3.right) * currentInput.y;
         moveDirection.y = moveDirectionY;
     }
 
@@ -66,6 +79,12 @@ public class FirstPersonController : MonoBehaviour
         rotationX = Mathf.Clamp(rotationX, -upperLookLimit, lowerLookLimit);
         playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
         transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeedX, 0);
+    }
+
+    private void HandleJump()
+    {
+        if (ShouldJump)
+            moveDirection.y = jumpForce;
     }
 
     private void ApplyFinalMovements()
