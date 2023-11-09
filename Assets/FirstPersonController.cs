@@ -21,7 +21,7 @@ public class FirstPersonController : MonoBehaviour
     private Camera playerCamera;
 
     private float rotationX;
-    private bool IsMovementEnabled => true;
+    private static bool IsMovementEnabled => true;
 
     // Start is called before the first frame update
     private void Start()
@@ -35,13 +35,11 @@ public class FirstPersonController : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        if (IsMovementEnabled)
-        {
-            HandleMovementInput();
-            HandleMouseLook();
+        if (!IsMovementEnabled) return;
+        HandleMovementInput();
+        HandleMouseLook();
 
-            ApplyFinalMovements();
-        }
+        ApplyFinalMovements();
     }
 
     private void HandleMovementInput()
