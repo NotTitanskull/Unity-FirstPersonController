@@ -7,12 +7,12 @@ public class FirstPersonController : MonoBehaviour
 
     [SerializeField] private float gravity = 30.0f;
 
-    [Header("Look Parameters")] [SerializeField, Range(1, 10)]
+    [Header("Look Parameters")] [SerializeField] [Range(1, 10)]
     private float horizontalLookSpeed = 2.0f;
 
-    [SerializeField, Range(1, 10)] private float verticalLookSpeed = 2.0f;
-    [SerializeField, Range(1, 180)] private float maxVerticalLookAngle = 80.0f;
-    [SerializeField, Range(1, 180)] private float minVerticalLookAngle = 80.0f;
+    [SerializeField] [Range(1, 10)] private float verticalLookSpeed = 2.0f;
+    [SerializeField] [Range(1, 180)] private float maxVerticalLookAngle = 80.0f;
+    [SerializeField] [Range(1, 180)] private float minVerticalLookAngle = 80.0f;
     private CharacterController characterController;
     private Vector2 currentInput;
 
@@ -20,11 +20,11 @@ public class FirstPersonController : MonoBehaviour
 
     private Camera playerCamera;
 
-    private float rotationX = 0;
-    public bool IsMovementEnabled { get; private set; } = true;
+    private float rotationX;
+    private static bool IsMovementEnabled => true;
 
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         playerCamera = GetComponentInChildren<Camera>();
         characterController = GetComponent<CharacterController>();
@@ -33,7 +33,7 @@ public class FirstPersonController : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         if (IsMovementEnabled)
         {
@@ -48,9 +48,9 @@ public class FirstPersonController : MonoBehaviour
     {
         currentInput = new Vector2(walkSpeed * Input.GetAxis("Vertical"), walkSpeed * Input.GetAxis("Horizontal"));
 
-        float moveDirectionY = moveDirection.y;
-        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) +
-                        (transform.TransformDirection(Vector3.right) * currentInput.y);
+        var moveDirectionY = moveDirection.y;
+        moveDirection = transform.TransformDirection(Vector3.forward) * currentInput.x +
+                        transform.TransformDirection(Vector3.right) * currentInput.y;
         moveDirection.y = moveDirectionY;
     }
 
