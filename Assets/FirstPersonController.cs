@@ -35,13 +35,11 @@ public class FirstPersonController : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        if (IsMovementEnabled)
-        {
-            HandleMovementInput();
-            HandleMouseLook();
+        if (!IsMovementEnabled) return;
+        HandleMovementInput();
+        HandleMouseLook();
 
-            ApplyFinalMovements();
-        }
+        ApplyFinalMovements();
     }
 
     private void HandleMovementInput()
