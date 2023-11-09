@@ -2,25 +2,33 @@ using UnityEngine;
 
 public class FirstPersonController : MonoBehaviour
 {
-    public bool CanMove { get; private set; } = true;
+    [Header("Functional Options")] [SerializeField]
+    private bool canSprint = true;
 
-    [Header("Movement Parameters")]
-    [SerializeField] private float walkSpeed = 3.0f;
+    [Header("Controls")] [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
+
+    [Header("Movement Parameters")] [SerializeField]
+    private float walkSpeed = 3.0f;
+
+    [SerializeField] private float sprintSpeed = 6.0f;
     [SerializeField] private float gravity = 30.0f;
 
-    [Header("Look Parameter")]
-    [SerializeField, Range(1, 10)] private float lookSpeedX = 2.0f;
+    [Header("Look Parameter")] [SerializeField, Range(1, 10)]
+    private float lookSpeedX = 2.0f;
+
     [SerializeField, Range(1, 10)] private float lookSpeedY = 2.0f;
     [SerializeField, Range(1, 180)] private float upperLookLimit = 80.0f;
     [SerializeField, Range(1, 180)] private float lowerLookLimit = 80.0f;
-
-    private Camera playerCamera;
     private CharacterController characterController;
-
-    private Vector3 moveDirection;
     private Vector2 currentInput;
 
+    private Vector3 moveDirection;
+
+    private Camera playerCamera;
+
     private float rotationX = 0;
+    public bool CanMove { get; private set; } = true;
+    private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
 
     // Start is called before the first frame update
     void Start()
@@ -45,10 +53,12 @@ public class FirstPersonController : MonoBehaviour
 
     private void HandleMovementInput()
     {
-        currentInput = new Vector2(walkSpeed * Input.GetAxis("Vertical"), walkSpeed * Input.GetAxis("Horizontal"));
+        currentInput = new Vector2((IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"),
+            (IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
 
         float moveDirectionY = moveDirection.y;
-        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) + (transform.TransformDirection(Vector3.right) * currentInput.y);
+        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) +
+                        (transform.TransformDirection(Vector3.right) * currentInput.y);
         moveDirection.y = moveDirectionY;
     }
 
@@ -62,7 +72,7 @@ public class FirstPersonController : MonoBehaviour
 
     private void ApplyFinalMovements()
     {
-        if(!characterController.isGrounded)
+        if (!characterController.isGrounded)
             moveDirection.y -= gravity * Time.deltaTime;
 
         characterController.Move(moveDirection * Time.deltaTime);
