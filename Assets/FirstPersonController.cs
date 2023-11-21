@@ -8,6 +8,7 @@ public class FirstPersonController : MonoBehaviour
 
     [SerializeField] private bool canJump = true;
     [SerializeField] private bool canCrouch = true;
+    [SerializeField] private bool canUseHeadbob = true;
 
     [Header("Controls")] [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
 
@@ -20,12 +21,12 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] private float sprintSpeed = 6.0f;
     [SerializeField] private float crouchSpeed = 1.5f;
 
-    [Header("Look Parameters")] [SerializeField, Range(1, 10)]
-    float lookSpeedX = 2.0f;
+    [Header("Look Parameters")] [SerializeField] [Range(1, 10)]
+    private float lookSpeedX = 2.0f;
 
-    [SerializeField, Range(1, 10)] float lookSpeedY = 2.0f;
-    [SerializeField, Range(1, 180)] float upperLookLimit = 80.0f;
-    [SerializeField, Range(1, 180)] float lowerLookLimit = -80.0f;
+    [SerializeField] [Range(1, 10)] private float lookSpeedY = 2.0f;
+    [SerializeField] [Range(1, 180)] private float upperLookLimit = 80.0f;
+    [SerializeField] [Range(1, 180)] private float lowerLookLimit = -80.0f;
 
     [Header("Jumping Parameters")] [SerializeField]
     private float jumpForce = 8.0f;
@@ -37,10 +38,20 @@ public class FirstPersonController : MonoBehaviour
 
     [SerializeField] private float standingHeight = 2f;
     [SerializeField] private float timeToCrouch = 0.25f;
-    [SerializeField] private Vector3 crouchingCenter = new Vector3(0, 0.5f, 0);
-    [SerializeField] private Vector3 standingCenter = new Vector3(0, 0, 0);
+    [SerializeField] private Vector3 crouchingCenter = new(0, 0.5f, 0);
+    [SerializeField] private Vector3 standingCenter = new(0, 0, 0);
+
+    [Header("Headbob Parameters")] [SerializeField]
+    private float walkBobSpeed = 14f;
+
+    [SerializeField] private float walkBobAmount = 0.05f;
+    [SerializeField] private float sprintBobSpeed = 18f;
+    [SerializeField] private float sprintBobAmount = 0.1f;
+    [SerializeField] private float crouchBobSpeed = 8f;
+    [SerializeField] private float crouchBobAmount = 0.025f;
     private CharacterController characterController;
     private Vector2 currentInput;
+    private float defaultYPos = 0;
     private bool duringCrouchAnimation;
     private bool isCrouching;
 
@@ -48,8 +59,9 @@ public class FirstPersonController : MonoBehaviour
 
     private Camera playerCamera;
 
-    private float rotationX = 0;
-    public bool CanMove { get; private set; } = true;
+    private float rotationX;
+    private float timer;
+    public bool CanMove { get; } = true;
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
     private bool ShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
 
@@ -60,6 +72,7 @@ public class FirstPersonController : MonoBehaviour
     {
         playerCamera = GetComponentInChildren<Camera>();
         characterController = GetComponent<CharacterController>();
+        defaultYPos = playerCamera.transform.localPosition.y;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -77,6 +90,9 @@ public class FirstPersonController : MonoBehaviour
             if (canCrouch)
                 HandleCrouch();
 
+            if (canUseHeadbob)
+                HandleHeadbob();
+
             ApplyFinalMovements();
         }
     }
@@ -86,9 +102,9 @@ public class FirstPersonController : MonoBehaviour
         currentInput =
             new Vector2((isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"),
                 (isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
-        float moveDirectionY = moveDirection.y;
-        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) +
-                        (transform.TransformDirection(Vector3.right) * currentInput.y);
+        var moveDirectionY = moveDirection.y;
+        moveDirection = transform.TransformDirection(Vector3.forward) * currentInput.x +
+                        transform.TransformDirection(Vector3.right) * currentInput.y;
         moveDirection.y = moveDirectionY;
     }
 
@@ -120,15 +136,30 @@ public class FirstPersonController : MonoBehaviour
         characterController.Move(moveDirection * Time.deltaTime);
     }
 
+    private void HandleHeadbob()
+    {
+        if (!characterController.isGrounded) return;
+
+        if (Mathf.Abs(moveDirection.x) > 0.1f || Mathf.Abs(moveDirection.z) > 0.1f)
+        {
+            timer += Time.deltaTime * (isCrouching ? crouchBobSpeed : IsSprinting ? sprintBobSpeed : walkBobSpeed);
+            playerCamera.transform.localPosition = new Vector3(
+                playerCamera.transform.localPosition.x,
+                defaultYPos + Mathf.Sin(timer) *
+                (isCrouching ? crouchBobAmount : IsSprinting ? sprintBobAmount : walkBobAmount),
+                playerCamera.transform.localPosition.z);
+        }
+    }
+
     private IEnumerator CrouchStand()
     {
         duringCrouchAnimation = true;
 
         float timeElapsed = 0;
-        float targetHeight = isCrouching ? standingHeight : crouchHeight;
-        float currentHeight = characterController.height;
-        Vector3 targetCenter = isCrouching ? standingCenter : crouchingCenter;
-        Vector3 currentCenter = characterController.center;
+        var targetHeight = isCrouching ? standingHeight : crouchHeight;
+        var currentHeight = characterController.height;
+        var targetCenter = isCrouching ? standingCenter : crouchingCenter;
+        var currentCenter = characterController.center;
 
         while (timeElapsed < timeToCrouch)
         {
