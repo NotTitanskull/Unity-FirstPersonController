@@ -49,77 +49,77 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] private float sprintBobAmount = 0.1f;
     [SerializeField] private float crouchBobSpeed = 8f;
     [SerializeField] private float crouchBobAmount = 0.025f;
-    private CharacterController characterController;
-    private Vector2 currentInput;
-    private float defaultYPos = 0;
-    private bool duringCrouchAnimation;
-    private bool isCrouching;
+    private CharacterController _characterController;
+    private Vector2 _currentInput;
+    private float _defaultYPos;
+    private bool _duringCrouchAnimation;
+    private bool _isCrouching;
 
-    private Vector3 moveDirection;
+    private Vector3 _moveDirection;
 
-    private Camera playerCamera;
+    private Camera _playerCamera;
 
-    private float rotationX;
-    private float timer;
-    public bool CanMove { get; } = true;
+    private float _rotationX;
+    private float _timer;
+    private bool CanMove { get; set; } = true;
     private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
-    private bool ShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
+    private bool ShouldJump => Input.GetKeyDown(jumpKey) && _characterController.isGrounded;
 
     private bool ShouldCrouch =>
-        Input.GetKeyDown(crouchKey) && !duringCrouchAnimation && characterController.isGrounded;
+        Input.GetKeyDown(crouchKey) && !_duringCrouchAnimation && _characterController.isGrounded;
 
     private void Start()
     {
-        playerCamera = GetComponentInChildren<Camera>();
-        characterController = GetComponent<CharacterController>();
-        defaultYPos = playerCamera.transform.localPosition.y;
+        _playerCamera = GetComponentInChildren<Camera>();
+        _characterController = GetComponent<CharacterController>();
+        _defaultYPos = _playerCamera.transform.localPosition.y;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
     private void Update()
     {
-        if (CanMove)
-        {
-            HandleMovementInput();
-            HandleMouseLook();
+        if (!CanMove) return;
+        HandleMovementInput();
+        HandleMouseLook();
 
-            if (canJump)
-                HandleJump();
+        if (canJump)
+            HandleJump();
 
-            if (canCrouch)
-                HandleCrouch();
+        if (canCrouch)
+            HandleCrouch();
 
-            if (canUseHeadbob)
-                HandleHeadbob();
+        if (canUseHeadbob)
+            HandleHeadbob();
 
-            ApplyFinalMovements();
-        }
+        ApplyFinalMovements();
     }
 
     private void HandleMovementInput()
     {
-        currentInput =
-            new Vector2((isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"),
-                (isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
-        var moveDirectionY = moveDirection.y;
-        moveDirection = transform.TransformDirection(Vector3.forward) * currentInput.x +
-                        transform.TransformDirection(Vector3.right) * currentInput.y;
-        moveDirection.y = moveDirectionY;
+        _currentInput =
+            new Vector2(
+                (_isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"),
+                (_isCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
+        var moveDirectionY = _moveDirection.y;
+        var transformForward = transform.TransformDirection(Vector3.forward);
+        var transformRight = transform.TransformDirection(Vector3.right);
+        _moveDirection = transformForward * _currentInput.x + transformRight * _currentInput.y;
+        _moveDirection.y = moveDirectionY;
     }
 
     private void HandleMouseLook()
     {
-        rotationX -= Input.GetAxis("Mouse Y") * lookSpeedY;
-        rotationX = Mathf.Clamp(rotationX, -upperLookLimit, lowerLookLimit);
-        playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+        _rotationX -= Input.GetAxis("Mouse Y") * lookSpeedY;
+        _rotationX = Mathf.Clamp(_rotationX, -upperLookLimit, lowerLookLimit);
+        _playerCamera.transform.localRotation = Quaternion.Euler(_rotationX, 0, 0);
         transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeedX, 0);
     }
 
     private void HandleJump()
     {
         if (ShouldJump)
-            moveDirection.y = jumpForce;
+            _moveDirection.y = jumpForce;
     }
 
     private void HandleCrouch()
@@ -130,50 +130,50 @@ public class FirstPersonController : MonoBehaviour
 
     private void ApplyFinalMovements()
     {
-        if (!characterController.isGrounded)
-            moveDirection.y -= gravity * Time.deltaTime;
+        if (!_characterController.isGrounded)
+            _moveDirection.y -= gravity * Time.deltaTime;
 
-        characterController.Move(moveDirection * Time.deltaTime);
+        _characterController.Move(_moveDirection * Time.deltaTime);
     }
 
     private void HandleHeadbob()
     {
-        if (!characterController.isGrounded) return;
+        if (!_characterController.isGrounded) return;
 
-        if (Mathf.Abs(moveDirection.x) > 0.1f || Mathf.Abs(moveDirection.z) > 0.1f)
-        {
-            timer += Time.deltaTime * (isCrouching ? crouchBobSpeed : IsSprinting ? sprintBobSpeed : walkBobSpeed);
-            playerCamera.transform.localPosition = new Vector3(
-                playerCamera.transform.localPosition.x,
-                defaultYPos + Mathf.Sin(timer) *
-                (isCrouching ? crouchBobAmount : IsSprinting ? sprintBobAmount : walkBobAmount),
-                playerCamera.transform.localPosition.z);
-        }
+        if (!(Mathf.Abs(_moveDirection.x) > 0.1f) && !(Mathf.Abs(_moveDirection.z) > 0.1f)) return;
+        _timer += Time.deltaTime * (_isCrouching ? crouchBobSpeed : IsSprinting ? sprintBobSpeed : walkBobSpeed);
+
+        var cameraTransform = _playerCamera.transform;
+        cameraTransform.localPosition = new Vector3(
+            cameraTransform.localPosition.x,
+            _defaultYPos + Mathf.Sin(_timer) *
+            (_isCrouching ? crouchBobAmount : IsSprinting ? sprintBobAmount : walkBobAmount),
+            _playerCamera.transform.localPosition.z);
     }
 
     private IEnumerator CrouchStand()
     {
-        duringCrouchAnimation = true;
+        _duringCrouchAnimation = true;
 
         float timeElapsed = 0;
-        var targetHeight = isCrouching ? standingHeight : crouchHeight;
-        var currentHeight = characterController.height;
-        var targetCenter = isCrouching ? standingCenter : crouchingCenter;
-        var currentCenter = characterController.center;
+        var targetHeight = _isCrouching ? standingHeight : crouchHeight;
+        var currentHeight = _characterController.height;
+        var targetCenter = _isCrouching ? standingCenter : crouchingCenter;
+        var currentCenter = _characterController.center;
 
         while (timeElapsed < timeToCrouch)
         {
-            characterController.height = Mathf.Lerp(currentHeight, targetHeight, timeElapsed / timeToCrouch);
-            characterController.center = Vector3.Lerp(currentCenter, targetCenter, timeElapsed / timeToCrouch);
+            _characterController.height = Mathf.Lerp(currentHeight, targetHeight, timeElapsed / timeToCrouch);
+            _characterController.center = Vector3.Lerp(currentCenter, targetCenter, timeElapsed / timeToCrouch);
             timeElapsed += Time.deltaTime;
             yield return null;
         }
 
-        characterController.height = targetHeight;
-        characterController.center = targetCenter;
+        _characterController.height = targetHeight;
+        _characterController.center = targetCenter;
 
-        isCrouching = !isCrouching;
+        _isCrouching = !_isCrouching;
 
-        duringCrouchAnimation = false;
+        _duringCrouchAnimation = false;
     }
 }
